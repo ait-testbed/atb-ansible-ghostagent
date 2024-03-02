@@ -1,2 +1,92 @@
 ---
 # tasks file for atb-ansible-ghostsagent
+- name: Install base applications
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ apps }}"
+    state: present
+
+- name: Install Chrome
+  chocolatey.chocolatey.win_chocolatey:
+    name: googlechrome
+    version: 122.0.6261.95
+    state: present
+
+- name: Install ChromeDriver
+  chocolatey.chocolatey.win_chocolatey:
+    name: chromedriver
+    version: 122.0.6261.943
+    state: present
+
+- name: Download and install GeckoDriver
+  ansible.windows.win_shell: |
+    $url = "https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-win64.zip"
+    $output = "C:\Program Files\Geckodriver\geckodriver.zip"
+    New-Item -Path "C:\Program Files\Geckodriver" -ItemType Directory
+    Invoke-WebRequest -Uri $url -OutFile $output
+    Expand-Archive -Path "C:\Program Files\Geckodriver\geckodriver.zip" -DestinationPath "C:\Program Files\Geckodriver"
+
+# Copy GHOSTS zip file to the target machine - https://github.com/cmu-sei/GHOSTS/releases/tag/v7.2.0
+- name: Copy GHOSTS Agent
+  ansible.windows.win_copy:
+    src: ghosts-client-x64-v7.0.0.zip
+    dest: C:\ProgramData\ghosts-client-x64-v7.0.0.zip
+
+# Unzip GHOSTS Agent via Powershell
+- name: Unzip GHOSTS Agent
+  ansible.windows.win_shell: |
+    Expand-Archive -Path "C:\ProgramData\ghosts-client-x64-v7.0.0.zip" -DestinationPath "C:\ProgramData"
+    Rename-Item -Path "C:\ProgramData\ghosts-client-x64-v7.0.0" -NewName "ghosts"
+    Move-Item -Path "C:\ProgramData\ghosts" -Destination "C:\ghosts"
+
+# Overwrite config file with the one from the Ansible Repo (config_files)
+# - name: Copy GHOSTS config file 'application.json'
+#   ansible.windows.win_copy:
+#     src: ~/Ansible_Win_Repo/config_files/application.json
+#     dest: C:\ghosts\config\application.json
+#     force: true
+
+# Copy drivers to GHOSTS folder
+- name: Copy ChromeDriver to GHOSTS folder
+  ansible.windows.win_copy:
+    src: C:\ProgramData\chocolatey\lib\chromedriver\tools\chromedriver-win32\chromedriver.exe
+    dest: C:\ghosts\chromedriver.exe
+    remote_src: true
+    force: true
+
+- name: Copy GeckoDriver to GHOSTS folder
+  ansible.windows.win_copy:
+    src: C:\Program Files\Geckodriver\geckodriver.exe
+    dest: C:\ghosts\geckodriver.exe
+    remote_src: true
+    force: true
+
+# Set GHOSTS folder ACL to allow everyone to access it
+- name: Set GHOSTS folder ACL
+  ansible.windows.win_acl:
+    path: C:\ghosts
+    user: Everyone
+    rights: FullControl
+    type: allow
+    state: present
+
+# Start GHOSTS Agent and drivers
+- name: Start GHOSTS Agent
+  ansible.windows.win_shell: |
+    cd C:\ghosts
+    .\ghosts.exe
+  async: 45
+  poll: 0
+
+# Wait 300 seconds for GHOSTS to initialize
+- name: Wait for GHOSTS to initialize
+  ansible.builtin.pause:
+    seconds: 300
+
+# Reboot Windows
+- name: Restart Windows
+  ansible.windows.win_reboot:
+    connect_timeout: 60
+    pre_reboot_delay: 0
+    post_reboot_delay: 0
+    reboot_timeout: 300
+    msg: "Ansible initiated reboot"
