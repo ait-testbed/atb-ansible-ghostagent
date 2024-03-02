@@ -1,2 +1,8 @@
 ---
 # vars file for atb-ansible-ghostsagent
+apps:
+  - notepadplusplus
+  - vscode
+  - dotnet
+  - firefox
+  - sysinternals
