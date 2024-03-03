@@ -7,4 +7,4 @@ apps:
   - firefox
   - sysinternals
 
-GhostsServerIP: 192.168.10.57
+GhostsServerIP: "192.168.10.57"
