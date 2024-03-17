@@ -41,7 +41,7 @@
   # Overwrite config file with the one from the Ansible Repo (config_files)
 - name: Copy GHOSTS config file 'application.json'
   ansible.windows.win_copy:
-    src: ~/Ansible_Win_Repo/config_files/application.json
+    src: application.json
     dest: C:\ghosts\config\application.json
     force: true
 
