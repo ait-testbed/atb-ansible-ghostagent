@@ -8,14 +8,16 @@
 - name: Install Chrome
   chocolatey.chocolatey.win_chocolatey:
     name: googlechrome
-    version: 122.0.6261.95
+    version: 122.0.6261.112
     state: present
+    ignore_checksums: true
 
 - name: Install ChromeDriver
   chocolatey.chocolatey.win_chocolatey:
     name: chromedriver
-    version: 122.0.6261.943
+    version: 122.0.6261.1113
     state: present
+    ignore_checksums: true
 
 - name: Download and install GeckoDriver
   ansible.windows.win_shell: |
@@ -96,6 +98,13 @@
   ansible.windows.win_reboot:
     connect_timeout: 60
     pre_reboot_delay: 0
-    post_reboot_delay: 0
+    post_reboot_delay: 120
     reboot_timeout: 300
     msg: "Ansible initiated reboot"
+
+- name: Check if GHOSTS process is running
+  ansible.windows.win_shell: |
+    $process = Get-Process -Name ghosts -ErrorAction SilentlyContinue
+    if ($process -eq $null) {
+      Start-Process -FilePath "C:\ghosts\ghosts.exe" -Wait:$false
+    }
